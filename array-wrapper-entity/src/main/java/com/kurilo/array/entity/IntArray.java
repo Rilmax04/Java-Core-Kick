@@ -42,7 +42,7 @@ public class IntArray {
         }
         logger.debug("Setting index {} to value {}", index, value);
         array[index] = value;
-        notifyListeners(); // 🔔 Уведомляем наблюдателей об изменении
+        notifyListeners(); 
     }
 
     public int[] toArray() {

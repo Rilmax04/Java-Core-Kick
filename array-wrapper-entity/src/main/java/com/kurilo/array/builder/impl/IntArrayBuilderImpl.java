@@ -16,9 +16,9 @@ public class IntArrayBuilderImpl implements IntArrayBuilder {
         return this;
     }
     @Override
-    public void addAll(IntArray other) throws ArrayDataException {
-        for (int i = 0; i < other.length(); i++) {
-            values.add(other.get(i));
+    public void addAll(IntArray other)  {
+        for (int i = 0; i < other.getLength(); i++) {
+            values.add(other.getElement(i));
         }
     }
     @Override

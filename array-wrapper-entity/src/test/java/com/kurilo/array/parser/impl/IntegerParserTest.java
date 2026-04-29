@@ -1,56 +1,50 @@
-package by.kurilo.array.parser.impl;
+package com.kurilo.array.parser.impl;
 
-import by.kurilo.array.parser.NumberParser;
+import com.kurilo.array.exception.ArrayDataException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import java.util.Optional;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.stream.Stream;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class IntegerParserTest {
 
-    private final NumberParser<Integer> parser = new IntegerParser();
+    private IntegerParser parser;
 
-    @Test
-    void parseShouldReturnOptionalWithIntegerForValidNumber() {
-        Optional<Integer> result = parser.parse("123");
-        assertTrue(result.isPresent());
-        assertEquals(123, result.get());
+    @BeforeEach
+    void setUp() {
+        parser = new IntegerParser();
+    }
+
+    static Stream<Arguments> validLinesProvider() {
+        return Stream.of(
+                Arguments.of("1, 2, 3", new int[]{1, 2, 3}),
+                Arguments.of("10;20-30 40", new int[]{10, 20, 30, 40}),
+                Arguments.of("  5   6   7  ", new int[]{5, 6, 7}),
+                Arguments.of("1, invalid, 2", new int[]{1, 2})
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("validLinesProvider")
+    @DisplayName("Парсинг валидных строк с различными разделителями")
+    void parseToArrayValidDataTest(String input, int[] expected) throws ArrayDataException {
+        int[] actual = parser.parseToArray(input);
+
+        assertAll("Проверка результата парсинга",
+                () -> assertEquals(expected.length, actual.length, "Длина массива не совпадает"),
+                () -> assertArrayEquals(expected, actual, "Содержимое массива не совпадает")
+        );
     }
 
     @Test
-    void parseShouldHandleNegativeNumbers() {
-        Optional<Integer> result = parser.parse("-456");
-        assertTrue(result.isPresent());
-        assertEquals(-456, result.get());
-    }
-
-    @Test
-    void parseShouldReturnEmptyForNonNumericString() {
-        Optional<Integer> result = parser.parse("abc");
-        assertFalse(result.isPresent());
-    }
-
-    @Test
-    void parseShouldReturnEmptyForNull() {
-        Optional<Integer> result = parser.parse(null);
-        assertFalse(result.isPresent());
-    }
-
-    @Test
-    void parseShouldReturnEmptyForBlankString() {
-        Optional<Integer> result = parser.parse("   ");
-        assertFalse(result.isPresent());
-    }
-
-    @Test
-    void parseShouldTrimWhitespace() {
-        Optional<Integer> result = parser.parse("  42  ");
-        assertTrue(result.isPresent());
-        assertEquals(42, result.get());
-    }
-
-    @Test
-    void parseShouldReturnEmptyForOverflowLongNumber() {
-        Optional<Integer> result = parser.parse("9999999999999");
-        assertFalse(result.isPresent());
+    @DisplayName("Исключение при пустой строке")
+    void parseToArrayEmptyLineExceptionTest() {
+        assertThrows(ArrayDataException.class, () -> parser.parseToArray("   "));
     }
 }

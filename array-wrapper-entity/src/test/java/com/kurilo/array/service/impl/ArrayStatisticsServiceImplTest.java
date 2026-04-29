@@ -1,69 +1,83 @@
-package by.kurilo.array.service.impl;
+package com.kurilo.array.service.impl;
 
-import by.kurilo.array.entity.IntArray;
-import by.kurilo.array.service.ArrayStatisticsService;
+import com.kurilo.array.entity.IntArray;
+import com.kurilo.array.exception.ArrayDataException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import java.util.Optional;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.stream.Stream;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class ArrayStatisticsServiceImplTest {
 
-    private final ArrayStatisticsService service = new ArrayStatisticsServiceImpl();
+    private ArrayStatisticsServiceImpl service;
+    private static final int[] sample = {10, -5, 20, 0, 15};
 
-    private static final IntArray NON_EMPTY_ARRAY = new IntArray(5, 2, 8, 1, 3);
-    private static final IntArray EMPTY_ARRAY = new IntArray();
-    private static final IntArray SUM_ARRAY = new IntArray(1, 2, 3, 4);
-    private static final IntArray AVG_ARRAY = new IntArray(2, 4, 6);
+    @BeforeEach
+    void setUp() {
+        service = new ArrayStatisticsServiceImpl();
+    }
 
-    @Test
-    void findMinShouldReturnSmallestValue() {
-        Optional<Integer> min = service.findMin(NON_EMPTY_ARRAY);
-        assertTrue(min.isPresent());
-        assertEquals(1, min.get());
+    @ParameterizedTest
+    @MethodSource("provideStatisticsCases")
+    @DisplayName("Статистики: min, max, sum, average")
+    void statistics_correctValues(IntArray array, int expectedMin, int expectedMax, int expectedSum, double expectedAvg)  {
+        assertAll("Statistics",
+                () -> assertEquals(expectedMin, service.findMin(array).orElseThrow()),
+                () -> assertEquals(expectedMax, service.findMax(array).orElseThrow()),
+                () -> assertEquals(expectedSum, service.sum(array).orElseThrow()),
+                () -> assertEquals(expectedAvg, service.average(array).orElseThrow(), 0.001)
+        );
+    }
+
+    private static Stream<Arguments> provideStatisticsCases() {
+        return Stream.of(
+                Arguments.of(new IntArray(sample), -5, 20, 40, 8.0),
+                Arguments.of(new IntArray(5, 5, 5), 5, 5, 15, 5.0),
+                Arguments.of(new IntArray(-10, -20, -5), -20, -5, -35, -11.667),
+                Arguments.of(new IntArray(42), 42, 42, 42, 42.0)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideEmptyCases")
+    @DisplayName("Пустой и null массив")
+    void statistics_emptyOrNull_returnsEmpty(IntArray array) {
+        assertAll("Empty cases",
+                () -> assertTrue(service.findMin(array).isEmpty()),
+                () -> assertTrue(service.findMax(array).isEmpty()),
+                () -> assertTrue(service.sum(array).isEmpty()),
+                () -> assertTrue(service.average(array).isEmpty())
+        );
+    }
+
+    private static Stream<Arguments> provideEmptyCases() {
+        return Stream.of(
+                Arguments.of((IntArray) null),
+                Arguments.of(new IntArray())
+        );
     }
 
     @Test
-    void findMinOnEmptyArrayShouldReturnEmpty() {
-        Optional<Integer> min = service.findMin(EMPTY_ARRAY);
-        assertFalse(min.isPresent());
+    @DisplayName("Переполнение суммы")
+    void sum_overflow_returnsEmpty() {
+        IntArray arr = new IntArray(Integer.MAX_VALUE, Integer.MAX_VALUE);
+        assertTrue(service.sum(arr).isEmpty());
     }
 
     @Test
-    void findMaxShouldReturnLargestValue() {
-        Optional<Integer> max = service.findMax(NON_EMPTY_ARRAY);
-        assertTrue(max.isPresent());
-        assertEquals(8, max.get());
-    }
-
-    @Test
-    void findMaxOnEmptyArrayShouldReturnEmpty() {
-        Optional<Integer> max = service.findMax(EMPTY_ARRAY);
-        assertFalse(max.isPresent());
-    }
-
-    @Test
-    void sumShouldReturnTotalOfElements() {
-        Optional<Integer> sum = service.sum(SUM_ARRAY);
-        assertTrue(sum.isPresent());
-        assertEquals(10, sum.get());
-    }
-
-    @Test
-    void sumOnEmptyArrayShouldReturnEmpty() {
-        Optional<Integer> sum = service.sum(EMPTY_ARRAY);
-        assertFalse(sum.isPresent());
-    }
-
-    @Test
-    void averageShouldReturnMeanValue() {
-        Optional<Double> avg = service.average(AVG_ARRAY);
+    @DisplayName("Среднее с дробной частью")
+    void average_fractionalValue_precision() {
+        IntArray arr = new IntArray(1, 2, 3);
+        OptionalDouble avg = service.average(arr);
         assertTrue(avg.isPresent());
-        assertEquals(4.0, avg.get(), 0.0001);
-    }
-
-    @Test
-    void averageOnEmptyArrayShouldReturnEmpty() {
-        Optional<Double> avg = service.average(EMPTY_ARRAY);
-        assertFalse(avg.isPresent());
+        assertEquals(2.0, avg.getAsDouble(), 0.001);
     }
 }

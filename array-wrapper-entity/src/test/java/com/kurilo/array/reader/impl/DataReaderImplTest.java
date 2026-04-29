@@ -1,53 +1,60 @@
 package com.kurilo.array.reader.impl;
 
 import com.kurilo.array.exception.ArrayDataException;
-import com.kurilo.array.reader.ReadFile;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TextFileReaderTest {
-
-    private final ReadFile reader = new TextFileReader();
+class DataReaderImplTest {
+    private DataReaderImpl reader;
 
     @TempDir
     Path tempDir;
 
+    @BeforeEach
+    void setUp() {
+        reader = new DataReaderImpl();
+    }
+
+    static Stream<Arguments> invalidPathProvider() {
+        return Stream.of(
+                Arguments.of((String) null),
+                Arguments.of("  "),
+                Arguments.of("non_existent_file.txt")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidPathProvider")
+    @DisplayName("Исключения при невалидных путях к файлу")
+    void readAllLinesFromFileExceptionTest(String path) {
+        assertThrows(ArrayDataException.class, () -> reader.readAllLinesFromFile(path));
+    }
+
     @Test
-    void readAllLinesShouldReturnListOfLines() throws Exception {
+    @DisplayName("Успешное чтение строк из файла")
+    void readAllLinesFromFileSuccessTest() throws IOException, ArrayDataException {
         Path file = tempDir.resolve("test.txt");
-        Files.write(file, List.of("first line", "second line", "third line"));
-        List<String> lines = reader.readAllLines(file.toString());
-        assertEquals(3, lines.size());
-        assertEquals("first line", lines.get(0));
-        assertEquals("second line", lines.get(1));
-        assertEquals("third line", lines.get(2));
-    }
+        List<String> expected = List.of("1, 2, 3", "4 5 6");
+        Files.write(file, expected);
 
-    @Test
-    void readAllLinesShouldThrowArrayDataExceptionWhenFileNotFound() {
-        Path nonExistent = tempDir.resolve("missing.txt");
-        assertThrows(ArrayDataException.class, () -> reader.readAllLines(nonExistent.toString()));
-    }
+        List<String> actual = reader.readAllLinesFromFile(file.toString());
 
-    @Test
-    void readAllLinesShouldHandleEmptyFile() throws Exception {
-        Path emptyFile = tempDir.resolve("empty.txt");
-        Files.createFile(emptyFile);
-        List<String> lines = reader.readAllLines(emptyFile.toString());
-        assertTrue(lines.isEmpty());
-    }
-
-    @Test
-    void readAllLinesShouldHandleTrailingNewlines() throws Exception {
-        Path file = tempDir.resolve("trailing.txt");
-        Files.write(file, List.of("line1", "line2", ""));
-        List<String> lines = reader.readAllLines(file.toString());
-        assertEquals(3, lines.size());
+        assertAll("Проверка прочитанных данных",
+                () -> assertEquals(expected.size(), actual.size(), "Количество строк не совпадает"),
+                () -> assertEquals(expected, actual, "Содержимое строк не совпадает")
+        );
     }
 }

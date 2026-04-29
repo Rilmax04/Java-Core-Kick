@@ -1,45 +1,44 @@
-package by.kurilo.array.validator.impl;
+package com.kurilo.array.validator.impl;
 
-import by.kurilo.array.validator.DataValidator;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.stream.Stream;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class IntegerValidatorTest {
+    private IntegerValidator validator;
 
-    private final DataValidator validator = new IntegerValidator();
-
-    @Test
-    void isValidShouldReturnTrueForValidInteger() {
-        assertTrue(validator.isValid("123"));
-        assertTrue(validator.isValid("-456"));
-        assertTrue(validator.isValid("0"));
+    @BeforeEach
+    void setUp() {
+        validator = new IntegerValidator();
     }
 
-    @Test
-    void isValidShouldReturnFalseForNonNumeric() {
-        assertFalse(validator.isValid("12.5"));
-        assertFalse(validator.isValid("abc"));
-        assertFalse(validator.isValid("1a2"));
+    static Stream<Arguments> tokenProvider() {
+        return Stream.of(
+                Arguments.of("123", true),
+                Arguments.of("-50", true),
+                Arguments.of("0", true),
+                Arguments.of("12.3", false),
+                Arguments.of("abc", false),
+                Arguments.of("", false),
+                Arguments.of(null, false),
+                Arguments.of("2147483648", false)
+        );
     }
 
-    @Test
-    void isValidShouldReturnFalseForNull() {
-        assertFalse(validator.isValid(null));
-    }
+    @ParameterizedTest
+    @MethodSource("tokenProvider")
+    @DisplayName("Валидация строковых токенов")
+    void isValidTest(String token, boolean expected) {
+        boolean actual = validator.isValid(token);
 
-    @Test
-    void isValidShouldReturnFalseForEmptyOrBlank() {
-        assertFalse(validator.isValid(""));
-        assertFalse(validator.isValid("   "));
-    }
-
-    @Test
-    void isValidShouldReturnFalseForLoneMinus() {
-        assertFalse(validator.isValid("-"));
-    }
-
-    @Test
-    void isValidShouldTrimAndValidate() {
-        assertTrue(validator.isValid("  789  "));
+        assertAll("Проверка валидности токена",
+                () -> assertEquals(expected, actual, "Ошибка валидации для токена: " + token)
+        );
     }
 }
